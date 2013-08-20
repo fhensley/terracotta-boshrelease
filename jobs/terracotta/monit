@@ -1,0 +1,5 @@
+check process terracotta
+  with pidfile /var/vcap/sys/run/terracotta/terracotta.pid
+  start program "/var/vcap/jobs/terracotta/bin/monit_debugger terracotta_ctl '/var/vcap/jobs/terracotta/bin/terracotta_ctl start'"
+  stop program "/var/vcap/jobs/terracotta/bin/monit_debugger terracotta_ctl '/var/vcap/jobs/terracotta/bin/terracotta_ctl stop'"
+  group vcap
