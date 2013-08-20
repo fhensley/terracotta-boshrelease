@@ -9,5 +9,7 @@ export HOME=/var/vcap
 
 PATH=/var/vcap/packages/java7/bin:$PATH
 
+ls -al $BOSH_COMPILE_TARGET/*
+
 tar xfv terracotta/terracotta-3.7.5.tar.gz
-cp -a terracotta/terracotta-3.7.5/* $BOSH_INSTALL_TARGET
+cp -a terracotta-3.7.5/* $BOSH_INSTALL_TARGET

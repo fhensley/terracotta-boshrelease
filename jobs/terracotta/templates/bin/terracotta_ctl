@@ -7,13 +7,20 @@ set -u # report the usage of uninitialized variables
 source /var/vcap/jobs/terracotta/helpers/ctl_setup.sh 'terracotta'
 
 export LANG=en_US.UTF-8
+export PACKAGE_DIR=/var/vcap/packages/terracotta
 
 case $1 in
 
   start)
     pid_guard $PIDFILE $JOB_NAME
 
-    # TODO: Run some process
+    mkdir -p /var/vcap/store/terracotta/server-data
+    chown vcap:vcap /var/vcap/store/terracotta/server-data
+    mkdir -p /var/vcap/store/terracotta/server-index
+    chown vcap:vcap /var/vcap/store/terracotta/server-index
+    mkdir -p /var/vcap/store/terracotta/server-statistics
+    chown vcap:vcap /var/vcap/store/terracotta/server-statistics
+
     exec $PACKAGE_DIR/bin/start-tc-server.sh -f $JOB_DIR/config/terracotta.xml \
          >>$LOG_DIR/$JOB_NAME.stdout.log \
          2>>$LOG_DIR/$JOB_NAME.stderr.log

@@ -1,14 +1,3 @@
-<%
-service = "terracotta"
-plan = properties.terracotta.plan
-plan_conf = properties.service_plans.send(service.to_sym).send(plan.to_sym).configuration
-warden = plan_conf.warden
-use_warden = warden && warden.enable
-log_dir = use_warden ? '/var/vcap/sys/service-log/terracotta' : '/var/vcap/sys/log/terracotta'
-hostname = plan_conf.hostname || 'my.host.name';
-name = plan_conf.name : 'My Server Name';
-listen_address = plan_conf.listen_address : '0.0.0.0';
-%>
 <?xml version="1.0" encoding="UTF-8" ?>
 <!--
 
@@ -80,7 +69,7 @@ All content copyright Terracotta, Inc., unless otherwise indicated. All rights r
         -Dtc.config=serverHost:dsoPort
 
     Default: 'development'. -->
-    <configuration-model><%= plan_conf.is_production ? 'production' : 'development' %></configuration-model>
+    <configuration-model>production</configuration-model>
   </system>
 
   <!--
@@ -106,7 +95,9 @@ All content copyright Terracotta, Inc., unless otherwise indicated. All rights r
     <!-- The host, symbolic name and bind address of the server; host defaults to "%i" (the machine's
        IP address), name defaults to "host:dso-port" and bind address defaults to "0.0.0.0".
        Expansion parameters may be used in all attributes. -->
-      <server host="<%= hostname %>" name="<%= name %>" bind="<%= listen_address %>">
+
+    <% p('terracotta.servers').each do |host| %>
+    <server host="<%= host %>">
 
       <!-- Where should the server store its persistent data? (This includes
          stored object data for DSO.) This value undergoes parameter substitution
@@ -124,7 +115,7 @@ All content copyright Terracotta, Inc., unless otherwise indicated. All rights r
          Default: 'data'; this places the 'data' directory in the
          directory you were in when you invoked 'start-tc-server'.
       -->
-      <data><%= plan_conf.data_dir || '/opt/terracotta/server-data' %></data>
+      <data>/var/vcap/store/terracotta/server-data</data>
 
       <!-- In which directory should the server store its log files? Again,
          this value undergoes parameter substitution before being used;
@@ -139,7 +130,7 @@ All content copyright Terracotta, Inc., unless otherwise indicated. All rights r
          Default: 'logs'; this places the 'logs' directory in the
          directory you were in when you invoked 'start-tc-server'.
       -->
-      <logs><%= log_dir %></logs>
+      <logs>/var/vcap/sys/log/terracotta</logs>
 
       <!-- Where should the server store its search index data? This value
          undergoes parameter substitution like <data> and <logs>
@@ -152,7 +143,7 @@ All content copyright Terracotta, Inc., unless otherwise indicated. All rights r
          Default: (none); the index will be stored in the same directory
          as the configured <data> location
       -->
-      <index><%= plan_conf.search_index_dir || '/opt/terracotta/server-index' %></index>
+      <index>/var/vcap/store/terracotta/server-index</index>
 
       <!-- In which directory should the server store statistics data that is
          being buffered? Again, this value undergoes parameter substitution
@@ -166,38 +157,10 @@ All content copyright Terracotta, Inc., unless otherwise indicated. All rights r
         
          Default: 'statistics' This places the 'statistics' directory in the
          directory you were in when you invoked 'start-tc-server'. -->
-      <statistics><%= plan_conf.statistics_dir || '/opt/terracotta/server-statistics' %></statistics>
-
-      <!-- On what port should the DSO server listen for connections from DSO
-         clients? This can be any port you like, but note that
-         ports below 1024 typically require 'root' privileges to use
-         on Un*x-style systems (Linux, Solaris). Optionally, you can bind
-         the port to a specific interface.
-
-         Default: 9510
-      -->
-      <dso-port bind="<%= plan_conf.dso_listen_address || listen_address %>"><%= plan_conf.dso_port || 9510 %></dso-port>
-
-      <!-- On what port should the server listen for connections from the
-         Terracotta administration console? This can be any port you
-         like, but note that ports below 1024 typically require 'root'
-         privileges to use on Un*x-style systems (Linux, Solaris).
-         Optionally, you can bind the port to a specific interface.
-
-         Default: dso port +10
-      -->
-      <jmx-port bind="<%= plan_conf.jmx_listen_address || listen_address %>"><%= plan_conf.jmx_port || 9520 %></jmx-port>
-
-      <!-- On what port should the server listen for communication from
-         other servers participating in an networked-active-passive setup.
-         This can be any port you like, but note that ports below 1024
-         typically require 'root' privileges to use on Un*x-style systems
-         (Linux, Solaris). Optionally, you can bind the port to a specific
-         interface.
-
-         Default: dso port + 20
-      -->
-      <l2-group-port bind="<%= plan_conf.l2_listen_address || listen_address %>"><%= plan_conf.l2_port || 9530 %></l2-group-port>
+      <statistics>/var/vcap/store/terracotta/server-statistics</statistics>
+      <dso-port><%= p("terracotta.dso_port") %></dso-port>
+      <jmx-port><%= p("terracotta.jmx_port") %></jmx-port>
+      <l2-group-port><%= p("terracotta.l2_port") %></l2-group-port>
       
       <!-- Turn on authentication for the Terracotta server. An empty tag
          <authentication> defaults to the standard Java JMX authentication
@@ -238,7 +201,7 @@ All content copyright Terracotta, Inc., unless otherwise indicated. All rights r
          obfuscated passwords or password checksums.
       -->
       <http-authentication>
-        <user-realm-file>/opt/terracotta/realm.properties</user-realm-file>
+        <user-realm-file>/var/vcap/jobs/terracotta/config/realm.properties</user-realm-file>
       </http-authentication>
 
       <!-- Configuration data for DSO that's specific to the DSO server. -->
@@ -254,29 +217,7 @@ All content copyright Terracotta, Inc., unless otherwise indicated. All rights r
 
         <!-- Information about how DSO should persist shared data to disk. -->
         <persistence>
-          <!-- How should DSO persist shared data to disk? This can be one
-             of two values:
-
-             'temporary-swap-only' causes the DSO server to use the
-             disk as a temporary backing store. Data is not
-             preserved across server restarts. This mode is somewhat
-             faster than 'permanent-store' mode.
-
-             'permanent-store' causes the DSO server to write data
-             immediately and permanently to disk. Upon server restart,
-             data will be restored, meaning data underneath roots
-             in your program will be restored to the exact state it
-             was in when the server shut down.
-
-             Note that if you are using clustered DSO servers
-             (you have more than one <server> element defined,
-             below), then 'permanent-store' mode is recommended.
-             This helps ensure proper operation of the DSO
-             failover mechanism.
-
-             Default: 'temporary-swap-only'
-          -->
-          <mode><%= plan_conf.store_permanently ? 'permanent-store' : 'temporary-swap-only' %></mode>
+          <mode><%= p('terracotta.store_permanently') ? 'permanent-store' : 'temporary-swap-only' %></mode>
         </persistence>
 
         <!-- Information about how DSO should perform distributed
@@ -300,14 +241,7 @@ All content copyright Terracotta, Inc., unless otherwise indicated. All rights r
           -->
           <enabled>true</enabled>
 
-          <!-- If 'true', the DSO server will emit extra information 
-             to the log file when it performs distributed garbage
-             collection; this can be useful when trying to
-             performance-tune your application.
-
-             Default: false
-          -->
-          <verbose><%= plan_conf.verbose_logging ? 'true' : 'false' %></verbose>
+          <verbose><%= p('terracotta.verbose_logging') ? 'true' : 'false' %></verbose>
 
           <!-- How often should the DSO server perform distributed 
              garbage collection, in seconds?
@@ -319,6 +253,7 @@ All content copyright Terracotta, Inc., unless otherwise indicated. All rights r
 
       </dso>
     </server>
+    <% end %>
 
     <!-- This additional <server> element is just to illustrate 
        that multiple server definitions can be listed
@@ -385,14 +320,7 @@ All content copyright Terracotta, Inc., unless otherwise indicated. All rights r
     -->
     <ha>
 
-      <!-- This section allows you configure whether servers run in 
-         disk-based active-passive or network-based active-passive mode. 
-         There are two HA mode options: 'disk-based-active-passive' and 
-         'networked-active-passive'. 
-
-         Default: 'networked-active-passive'
-      -->
-      <mode><%= plan_conf.disk_based ? 'disk-based-active-passive' : 'networked-active-passive' %></mode>
+      <mode><%= p('terracotta.disk_based') ? 'disk-based-active-passive' : 'networked-active-passive' %></mode>
       
       <!-- This section allows you to declare the election time window, 
          which is used when servers run in network-based active-passive mode. 
@@ -404,7 +332,7 @@ All content copyright Terracotta, Inc., unless otherwise indicated. All rights r
          Default: 5
       -->
       <networked-active-passive>
-        <election-time><%= plan_conf.election_time || 5 %></election-time>
+        <election-time><%= p('terracotta.election_time') %></election-time>
       </networked-active-passive>
     </ha>
 
@@ -413,16 +341,7 @@ All content copyright Terracotta, Inc., unless otherwise indicated. All rights r
 
     -->
     <update-check>
-      <!-- This element determines if the server will check for updates
-         to the version of the Terracotta platform your are using. The server
-         will contact the terracotta.org website and compare the version of
-         your software with a registry of current releases. Information about
-         new versions will be logged and displayed on the server's standard
-         output.
-
-         Default: 'false'
-      -->
-      <enabled><%= plan_conf.version_check ? 'true' : 'false' %></enabled>
+      <enabled><%= p('terracotta.version_check') ? 'true' : 'false' %></enabled>
       
       <!-- This element controls the period, in days, between update checks
          given that update checking is enabled. When checking is enabled, each

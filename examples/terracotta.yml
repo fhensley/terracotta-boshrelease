@@ -1,42 +1,17 @@
 ---
 properties:
-	service_plans:
-	    mongodb:
-	      default:
-		description: "Developer, shared VM, 250MB storage, 10 connections"
-		free: true
-		job_management:
-		  high_water: 230
-		  low_water: 20
-		configuration:
-			hostname: "my.host.name"
-			name: "My Server Name"
-			listen_address: 0.0.0.0
-			is_production: false
-			data_dir: "/opt/terracotta/server-data"
-			search_index_dir: "/opt/terracotta/server-index"
-			statistics_dir: "/opt/terracotta/server-statistics"
-			dso_listen_address: 0.0.0.0
-			dso_port: 9510
-			jmx_listen_address: 127.0.0.1
-			jmx_port: 9520
-			l2_listen_address: 127.0.0.1
-			l2_port: 9530
-			store_permanently: false
-			verbose_logging: true
-			disk_based: false
-			election_time: 5
-			version_check: false
-		  capacity: 125
-		  max_clients: 10
-		  quota_files: 4
-		  quota_data_size: 240
-		  enable_journaling: true
-		  backup:
-		    enable: true
-		  lifecycle:
-		    enable: true
-		    serialization: enable
-		    snapshot:
-		      quota: 1
-			 
+  terracotta:
+    name: "My Server Name"
+    listen_address: 0.0.0.0
+    dso_port: 9510
+    jmx_port: 9520
+    l2_port: 9530
+    store_permanently: false
+    verbose_logging: true
+    disk_based: false
+    election_time: 5
+    version_check: false
+    servers:
+      - 0.terracotta.default.terracotta.microbosh
+      - 1.terracotta.default.terracotta.microbosh
+
