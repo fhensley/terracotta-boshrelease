@@ -12,7 +12,7 @@ export PACKAGE_DIR=/var/vcap/packages/terracotta
 case $1 in
 
   start)
-    pid_guard $PIDFILE $JOB_NAME
+    pid_guard $JAVA_PIDFILE $PIDFILE $JOB_NAME
 
     mkdir -p /var/vcap/store/terracotta/server-data
     chown vcap:vcap /var/vcap/store/terracotta/server-data
@@ -23,14 +23,18 @@ case $1 in
 
     exec $PACKAGE_DIR/bin/start-tc-server.sh -f $JOB_DIR/config/terracotta.xml \
          >>$LOG_DIR/$JOB_NAME.stdout.log \
-         2>>$LOG_DIR/$JOB_NAME.stderr.log
+         2>>$LOG_DIR/$JOB_NAME.stderr.log &
 
     # store pid in $PIDFILE
     echo $! > $PIDFILE
+    sleep 5
+    PID=`ps ax|grep -v grep|grep java|grep tc.install-root|awk '{print $1}'`
+    echo $PID > $JAVA_PIDFILE
     ;;
 
   stop)
     exec $PACKAGE_DIR/bin/stop-tc-server.sh -f $JOB_DIR/config/terracotta.xml
+    kill_and_wait $JAVA_PIDFILE
     kill_and_wait $PIDFILE
 
     ;;

@@ -77,5 +77,6 @@ do
 done
 
 PIDFILE=$RUN_DIR/$JOB_NAME.pid
+JAVA_PIDFILE=$RUN_DIR/JAVA_$JOB_NAME.pid
 
 echo '$PATH' $PATH
